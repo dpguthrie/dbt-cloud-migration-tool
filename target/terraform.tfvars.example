@@ -1,0 +1,13 @@
+# Target dbt Cloud instance configuration
+# Replace these values with your target instance details
+
+# Your dbt Cloud account ID (required)
+dbt_account_id = "123456789"
+
+# The API host URL for your dbt Cloud instance (required)
+# Unless you're on North America Multi-tenant, check your in your Account Settings
+dbt_host_url = "https://cloud.getdbt.com/api"
+
+# Your dbt Cloud API token (required)
+# Generate this in your dbt Cloud account under Account Settings > Service Tokens
+dbt_token = "dbt_your_token_here" 

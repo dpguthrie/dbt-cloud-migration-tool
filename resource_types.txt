@@ -1,0 +1,11 @@
+dbtcloud_global_connection
+dbtcloud_group
+dbtcloud_service_token
+dbtcloud_webhook
+dbtcloud_environment
+dbtcloud_environment_variable
+dbtcloud_job
+dbtcloud_project
+dbtcloud_project_repository
+dbtcloud_repository
+dbtcloud_snowflake_credential
