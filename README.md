@@ -66,7 +66,7 @@ Take a look at the resulting `resources.tf` file and make sure it looks good.  I
 
 ### 3. Apply Configuration to Target Instance
 
-Modify the [`target/terraform.tfvars`](target/terraform.tfvars) file with the correct values for the target instance.
+Modify the [`target/terraform.tfvars.example`](target/terraform.tfvars.example) file with the correct values for the target instance and rename it to `terraform.tfvars`.
 
 Plan the changes:
 ```bash
