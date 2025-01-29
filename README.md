@@ -43,7 +43,7 @@ export DBT_CLOUD_TOKEN="your_source_service_token"
 export DBT_CLOUD_ACCOUNT_ID=your_source_account_id
 ```
 
-Verify the things to export in `resource_types.txt`.  It's currently set to export as much as possible, so if you're only using Snowflake, you can remove the resources relevant to Bigquery, Databricks, etc.
+Verify the things to export in `resource_types.txt`.  It's currently set to export as much as possible, so if you're only using Snowflake, you can remove the resources relevant to Bigquery, Databricks, etc.  See the [dbtcloud-terraforming](https://github.com/dbt-labs/dbtcloud-terraforming) README for more details.
 
 ```bash  
 # Export configuration using dbtcloud-terraforming
@@ -61,7 +61,7 @@ Or if you haven't set up the environment variables yet, you can use the argument
 
 Take a look at the resulting `resources.tf` file and make sure it looks good.  If you need to make changes, you can do so in the `resources.tf` file.
 
-- Look for `deferring_environment_id` and replace it with the `environment_id` of the environment you want to defer to.  Should look something like `dbtcloud_environment.terraform_managed_resource_<id>.environment_id`.
+- Look for `deferring_environment_id` and replace it with the `environment_id` of the environment you want to defer to.  Should look something like `dbtcloud_environment.terraform_managed_resource_<id>.environment_id`.  **Also, be aware that you'll need to have at least one run in that deferred environment before this can work properly.  I recommend running a `dbt parse` or `dbt compile`.
 - Look for `credential_id` and replace it with the `credential_id` of the credential you want to use or just set to `null`
 
 ### 3. Apply Configuration to Target Instance
@@ -121,7 +121,7 @@ export DBT_CLOUD_ACCOUNT_ID="12345"
 
 # 4. Plan and apply changes
 ./migrate.sh plan
-./migrate.sh apply  
+./migrate.sh apply
 ```
 
 ## Known Limitations
