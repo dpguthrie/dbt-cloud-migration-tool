@@ -12,11 +12,11 @@ usage() {
     echo "  $0 export [--source-host HOST] [--source-token TOKEN] [--source-account-id ID]"
     echo "    Environment variables: DBT_CLOUD_HOST_URL, DBT_CLOUD_TOKEN, DBT_CLOUD_ACCOUNT_ID"
     echo ""
-    echo "  $0 plan"
-    echo "    Reviews planned changes using values from terraform.tfvars"
-    echo ""
-    echo "  $0 apply"
-    echo "    Applies the planned changes using values from terraform.tfvars"
+    echo "After exporting, cd into the target directory and use standard Terraform commands:"
+    echo "  cd target"
+    echo "  terraform init"
+    echo "  terraform plan"
+    echo "  terraform apply"
     exit 1
 }
 
@@ -49,21 +49,16 @@ command_exists() {
 
 # Export configuration from source instance
 export_config() {
-    # Use environment variables if they exist, otherwise use arguments
-    local source_host=${DBT_CLOUD_HOST_URL:-$1}
-    local source_token=${DBT_CLOUD_TOKEN:-$2}
-    local source_account_id=${DBT_CLOUD_ACCOUNT_ID:-$3}
-
     print_header "Starting Export Process"
     
-    # Set environment variables for dbtcloud-terraforming
-    export DBT_CLOUD_HOST_URL="${DBT_CLOUD_HOST_URL:-$source_host}"
-    export DBT_CLOUD_TOKEN="${DBT_CLOUD_TOKEN:-$source_token}"
-    export DBT_CLOUD_ACCOUNT_ID="${DBT_CLOUD_ACCOUNT_ID:-$source_account_id}"
+    # Set environment variables for dbtcloud-terraforming if not already set
+    export DBT_CLOUD_HOST_URL="${DBT_CLOUD_HOST_URL:-$1}"
+    export DBT_CLOUD_TOKEN="${DBT_CLOUD_TOKEN:-$2}"
+    export DBT_CLOUD_ACCOUNT_ID="${DBT_CLOUD_ACCOUNT_ID:-$3}"
 
     # Create output directory
     mkdir -p ./target
-
+    
     # Create or clear the resources.tf file
     : > "./target/resources.tf"
 
@@ -109,83 +104,12 @@ export_config() {
     
     print_header "Export Complete"
     echo "Configuration has been exported to: ./target/resources.tf"
-    echo ""
-}
-
-# Plan terraform changes
-plan_config() {
-    print_header "Planning Configuration Changes"
-
-    # Store current directory
-    local original_dir=$(pwd)
-    
-    # Change to target directory
-    cd target || {
-        echo "Error: target directory not found"
-        echo "Please run './migrate.sh export' first"
-        exit 1
-    }
-
-    # Verify terraform.tfvars exists
-    if [ ! -f "terraform.tfvars" ]; then
-        echo "Error: terraform.tfvars file not found in target directory"
-        echo "Please create this file with your target instance configuration:"
-        echo "  dbt_account_id = \"your_account_id\""
-        echo "  dbt_token      = \"your_token\""
-        echo "  dbt_host_url   = \"your_host_url\""
-        cd "$original_dir"
-        exit 1
-    fi
-
-    # Initialize Terraform if not already initialized
-    if [ ! -d ".terraform" ]; then
-        echo "Initializing Terraform..."
-        terraform init
-    fi
-
-    # Create the plan
-    echo "Creating Terraform plan..."
-    terraform plan -out=tfplan
-
-    # Return to original directory
-    cd "$original_dir"
-
-    print_header "Planning Complete"
-    echo "Review the plan above and run './migrate.sh apply' to apply changes"
-    echo ""
-}
-
-# Apply terraform changes
-apply_config() {
-    print_header "Applying Configuration Changes"
-
-    # Store current directory
-    local original_dir=$(pwd)
-    
-    # Change to target directory
-    cd target || {
-        echo "Error: target directory not found"
-        echo "Please run './migrate.sh export' first"
-        exit 1
-    }
-
-    # Check if plan exists
-    if [ ! -f "tfplan" ]; then
-        echo "Error: No terraform plan found"
-        echo "Please run './migrate.sh plan' first"
-        cd "$original_dir"
-        exit 1
-    fi
-
-    # Apply the plan
-    echo "Applying Terraform plan..."
-    terraform apply tfplan
-
-    # Return to original directory
-    cd "$original_dir"
-
-    print_header "Apply Complete"
-    echo "Configuration has been successfully applied to target instance"
+    echo "Next steps:"
+    echo "1. cd target"
+    echo "2. cp terraform.tfvars.example terraform.tfvars"
+    echo "3. Edit terraform.tfvars with your target instance details"
+    echo "4. terraform init"
+    echo "5. terraform plan"
     echo ""
 }
 
@@ -230,14 +154,6 @@ case "$1" in
         fi
 
         export_config "$source_host" "$source_token" "$source_account_id"
-        ;;
-
-    plan)
-        plan_config
-        ;;
-
-    apply)
-        apply_config
         ;;
 
     *)

@@ -36,22 +36,21 @@ Check out the README for [dbtcloud-terraforming](https://github.com/dbt-labs/dbt
 
 ### 2. Export Configuration from Source Instance
 
+First, set up environment variables for your source instance:
 ```bash
-# Set up environment variables for source instance
-export DBT_CLOUD_HOST="https://YOUR_SOURCE_REGION.getdbt.com/api"
+export DBT_CLOUD_HOST_URL="https://YOUR_SOURCE_REGION.getdbt.com/api"
 export DBT_CLOUD_TOKEN="your_source_service_token"
 export DBT_CLOUD_ACCOUNT_ID=your_source_account_id
 ```
 
-Verify the things to export in `resource_types.txt`.  It's currently set to export as much as possible, so if you're only using Snowflake, you can remove the resources relevant to Bigquery, Databricks, etc.  See the [dbtcloud-terraforming](https://github.com/dbt-labs/dbtcloud-terraforming) README for more details.
+Review and modify `resource_types.txt` to specify which resources to export. See the [dbtcloud-terraforming](https://github.com/dbt-labs/dbtcloud-terraforming) README for available resource types.
 
-```bash  
-# Export configuration using dbtcloud-terraforming
+Then export the configuration:
+```bash
 ./migrate.sh export
 ```
 
-Or if you haven't set up the environment variables yet, you can use the arguments:
-
+Or if you haven't set environment variables:
 ```bash
 ./migrate.sh export \
   --source-host "https://cloud.getdbt.com/api" \
@@ -59,26 +58,46 @@ Or if you haven't set up the environment variables yet, you can use the argument
   --source-account-id "your_source_account_id"
 ```
 
-Take a look at the resulting `resources.tf` file and make sure it looks good.  If you need to make changes, you can do so in the `resources.tf` file.
+### 3. Review and Modify Configuration
 
-- Look for `deferring_environment_id` and replace it with the `environment_id` of the environment you want to defer to.  Should look something like `dbtcloud_environment.terraform_managed_resource_<id>.environment_id`.  **Also, be aware that you'll need to have at least one run in that deferred environment before this can work properly.  I recommend running a `dbt parse` or `dbt compile`.
-- Look for `credential_id` and replace it with the `credential_id` of the credential you want to use or just set to `null`
+1. Check the generated `target/resources.tf` file
+2. Make any necessary adjustments:
+   - Update `deferring_environment_id` references
+   - Modify or remove `credential_id` values
+   - Adjust any environment-specific settings
 
-### 3. Apply Configuration to Target Instance
+### 4. Apply Configuration to Target Instance
 
-Modify the [`target/terraform.tfvars.example`](target/terraform.tfvars.example) file with the correct values for the target instance and rename it to `terraform.tfvars`.
-
-Plan the changes:
+1. Set up target instance configuration:
 ```bash
-./migrate.sh plan
+cd target
+cp terraform.tfvars.example terraform.tfvars
+# Edit terraform.tfvars with your target instance details
 ```
 
-Apply the changes:
+2. Initialize Terraform:
 ```bash
-./migrate.sh apply
+terraform init
 ```
 
-### 4. Post-Migration Tasks
+3. Preview changes:
+```bash
+terraform plan
+```
+
+4. Apply changes:
+```bash
+terraform apply
+```
+
+5. To remove resources:
+```bash
+terraform destroy
+```
+
+For more advanced Terraform usage, refer to the [Terraform CLI documentation](https://www.terraform.io/cli/commands).
+
+### 5. Post-Migration Tasks
 
 1. **Verify Repository Connections**:
    - Reconnect Git repositories
@@ -99,6 +118,23 @@ Apply the changes:
    - Run test jobs
    - Verify environment configurations
    - Check scheduler settings
+
+## Known Limitations
+
+1. **Credentials and Secrets**:
+   - Repository credentials (SSH keys, tokens) must be manually recreated
+   - Service account tokens must be regenerated
+   - Environment variables containing secrets must be manually recreated
+
+2. **Project Data**:
+   - Actual project data/artifacts are not migrated
+   - Job run history is not preserved
+   - Job artifacts and logs are not transferred
+
+3. **User Management**:
+   - User accounts must exist in the target instance
+   - User permissions must be manually verified
+   - SSO configurations must be set up separately
 
 ## Usage Example
 
@@ -123,24 +159,6 @@ export DBT_CLOUD_ACCOUNT_ID="12345"
 ./migrate.sh plan
 ./migrate.sh apply
 ```
-
-## Known Limitations
-
-1. **Credentials and Secrets**:
-   - Repository credentials (SSH keys, tokens) must be manually recreated
-   - Service account tokens must be regenerated
-   - Environment variables containing secrets must be manually recreated
-
-2. **Project Data**:
-   - Actual project data/artifacts are not migrated
-   - Job run history is not preserved
-   - Job artifacts and logs are not transferred
-
-3. **User Management**:
-   - User accounts must exist in the target instance
-   - User permissions must be manually verified
-   - SSO configurations must be set up separately
-
 
 ## Security Considerations
 
