@@ -9,7 +9,7 @@ set -e
 # Function to display usage information
 usage() {
     echo "Usage:"
-    echo "  $0 export [--source-host HOST] [--source-token TOKEN] [--source-account-id ID]"
+    echo "  $0 [--source-host HOST] [--source-token TOKEN] [--source-account-id ID]"
     echo "    Environment variables: DBT_CLOUD_HOST_URL, DBT_CLOUD_TOKEN, DBT_CLOUD_ACCOUNT_ID"
     echo ""
     echo "After exporting, cd into the target directory and use standard Terraform commands:"
@@ -27,35 +27,31 @@ print_header() {
     echo ""
 }
 
-# Function to create a temporary directory for output
-setup_temp_dir() {
-    local temp_dir
-    temp_dir=$(mktemp -d)
-    echo "Created temporary directory: $temp_dir" >&2
-    echo "$temp_dir"
-}
-
-# Function to cleanup temporary files
-cleanup() {
-    local temp_dir="$1"
-    echo "Cleaning up temporary files..." >&2
-    rm -rf "$temp_dir"
-}
-
-# Function to check if a command exists
-command_exists() {
-    command -v "$1" >/dev/null 2>&1
+# Function to fix deferring_environment_id references
+fix_environment_references() {
+    print_header "Fixing Environment References"
+    
+    # Create a backup of the original file
+    cp "./target/resources.tf" "./target/resources.tf.bak"
+    
+    # Use sed to replace direct IDs with references
+    sed -i.tmp -E 's/deferring_environment_id = ([0-9]+)/deferring_environment_id = dbtcloud_environment.terraform_managed_resource_\1.environment_id/g' "./target/resources.tf"
+    
+    # Replace unsupported credential_id placeholders with null
+    sed -i.tmp -E 's/credential_id[[:space:]]*=[[:space:]]*"---TBD---credential type not supported yet---"/credential_id = null/g' "./target/resources.tf"
+    
+    # Clean up temporary files
+    rm -f "./target/resources.tf.tmp"
+    
+    echo "Updated environment references in resources.tf"
+    echo "Updated unsupported credential_id fields to null"
+    echo "Original file backed up as resources.tf.bak"
 }
 
 # Export configuration from source instance
 export_config() {
     print_header "Starting Export Process"
     
-    # Set environment variables for dbtcloud-terraforming if not already set
-    export DBT_CLOUD_HOST_URL="${DBT_CLOUD_HOST_URL:-$1}"
-    export DBT_CLOUD_TOKEN="${DBT_CLOUD_TOKEN:-$2}"
-    export DBT_CLOUD_ACCOUNT_ID="${DBT_CLOUD_ACCOUNT_ID:-$3}"
-
     # Create output directory
     mkdir -p ./target
     
@@ -97,6 +93,9 @@ export_config() {
         --linked-resource-types all \
         > "./target/resources.tf"; then
         echo "Successfully generated configuration"
+        
+        # Fix environment references
+        fix_environment_references
     else
         echo "Error generating configuration"
         exit 1
@@ -110,53 +109,45 @@ export_config() {
     echo "3. Edit terraform.tfvars with your target instance details"
     echo "4. terraform init"
     echo "5. terraform plan"
+    echo "6. terraform apply"
     echo ""
 }
 
 # Main script logic
-case "$1" in
-    export)
-        shift
-        source_host=""
-        source_token=""
-        source_account_id=""
-        
-        # Parse command line arguments if provided
-        while [[ $# -gt 0 ]]; do
-            case "$1" in
-                --source-host)
-                    source_host="$2"
-                    shift 2
-                    ;;
-                --source-token)
-                    source_token="$2"
-                    shift 2
-                    ;;
-                --source-account-id)
-                    source_account_id="$2"
-                    shift 2
-                    ;;
-                *)
-                    usage
-                    ;;
-            esac
-        done
+source_host=""
+source_token=""
+source_account_id=""
 
-        # Use environment variables if available, otherwise use command line arguments
-        source_host=${DBT_CLOUD_HOST_URL:-$source_host}
-        source_token=${DBT_CLOUD_TOKEN:-$source_token}
-        source_account_id=${DBT_CLOUD_ACCOUNT_ID:-$source_account_id}
-
-        # Check if we have all required values from either source
-        if [ -z "$source_host" ] || [ -z "$source_token" ] || [ -z "$source_account_id" ]; then
-            echo "Error: Missing required values. Please provide either environment variables or command line arguments."
+# Parse command line arguments if provided
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --source-host)
+            source_host="$2"
+            shift 2
+            ;;
+        --source-token)
+            source_token="$2"
+            shift 2
+            ;;
+        --source-account-id)
+            source_account_id="$2"
+            shift 2
+            ;;
+        *)
             usage
-        fi
+            ;;
+    esac
+done
 
-        export_config "$source_host" "$source_token" "$source_account_id"
-        ;;
+# Use environment variables if available, otherwise use command line arguments
+source_host=${DBT_CLOUD_HOST_URL:-$source_host}
+source_token=${DBT_CLOUD_TOKEN:-$source_token}
+source_account_id=${DBT_CLOUD_ACCOUNT_ID:-$source_account_id}
 
-    *)
-        usage
-        ;;
-esac 
+# Check if we have all required values from either source
+if [ -z "$source_host" ] || [ -z "$source_token" ] || [ -z "$source_account_id" ]; then
+    echo "Error: Missing required values. Please provide either environment variables or command line arguments."
+    usage
+fi
+
+export_config "$source_host" "$source_token" "$source_account_id" 

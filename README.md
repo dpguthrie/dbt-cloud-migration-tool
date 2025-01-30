@@ -14,7 +14,7 @@ This tool facilitates the migration of dbt Cloud resources between different ins
 
 ### 1. Install dependencies
 
-- Install Terraform
+#### Install Terraform
 
 **Mac / Linux**
 ```bash
@@ -25,13 +25,14 @@ brew tap hashicorp/tap && brew install hashicorp/tap/terraform
 choco install terraform
 ```
 
-- Install `dbtcloud-terraforming`
+#### Install `dbtcloud-terraforming`
 
 **Mac / Linux**
 ```bash
 brew install dbt-labs/dbt-cli/dbtcloud-terraforming
 ```
 **Windows**
+
 Check out the README for [dbtcloud-terraforming](https://github.com/dbt-labs/dbtcloud-terraforming) for instructions on how to install for Windows.
 
 ### 2. Export Configuration from Source Instance
@@ -47,12 +48,12 @@ Review and modify `resource_types.txt` to specify which resources to export. See
 
 Then export the configuration:
 ```bash
-./migrate.sh export
+./migrate.sh
 ```
 
-Or if you haven't set environment variables:
+Or if you haven't set environment variables, provide them as command line arguments:
 ```bash
-./migrate.sh export \
+./migrate.sh \
   --source-host "https://cloud.getdbt.com/api" \
   --source-token "your_source_service_token" \
   --source-account-id "your_source_account_id"
@@ -61,9 +62,11 @@ Or if you haven't set environment variables:
 ### 3. Review and Modify Configuration
 
 1. Check the generated `target/resources.tf` file
+   - Environment references (`deferring_environment_id`) are automatically updated to use Terraform resource references
+   - Unsupported credential types are automatically set to `null`
+   - A backup of the original file is saved as `resources.tf.bak`
 2. Make any necessary adjustments:
-   - Update `deferring_environment_id` references
-   - Modify or remove `credential_id` values
+   - Modify or remove `credential_id` values that were not automatically handled
    - Adjust any environment-specific settings
 
 ### 4. Apply Configuration to Target Instance
@@ -147,17 +150,23 @@ cd dbt-cloud-migration-tool
 brew tap hashicorp/tap && brew install hashicorp/tap/terraform
 brew install dbt-labs/dbt-cli/dbtcloud-terraforming
 
-# Set up environment variables for source instance
-export DBT_CLOUD_HOST="https://cloud.getdbt.com/api"
+# 3. Set up environment variables for source instance
+export DBT_CLOUD_HOST_URL="https://cloud.getdbt.com/api"
 export DBT_CLOUD_TOKEN="my_service_token"
 export DBT_CLOUD_ACCOUNT_ID="12345"
 
-# 3. Export source configuration
-./migrate.sh export
+# 4. Export source configuration
+./migrate.sh
 
-# 4. Plan and apply changes
-./migrate.sh plan
-./migrate.sh apply
+# 5. Configure target instance
+cd target
+cp terraform.tfvars.example terraform.tfvars
+# Edit terraform.tfvars with your target instance details
+
+# 6. Apply changes using Terraform directly
+terraform init
+terraform plan
+terraform apply
 ```
 
 ## Security Considerations
